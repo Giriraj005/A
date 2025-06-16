@@ -1,155 +1,97 @@
-// App.jsx
-import React, { useState } from "react";
-import { initializeApp } from "firebase/app";
-import {
-  getAuth,
-  RecaptchaVerifier,
-  signInWithPhoneNumber,
-} from "firebase/auth";
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Login with Phone</title>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js"></script>
+  <style>
+    body {
+      background: #0A0A23;
+      color: white;
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 40px;
+    }
+    input, button {
+      padding: 10px;
+      margin: 10px;
+      width: 80%;
+      max-width: 300px;
+      font-size: 16px;
+      border-radius: 5px;
+      border: none;
+    }
+    button {
+      background: #00e0c2;
+      color: black;
+      cursor: pointer;
+    }
+    #recaptcha-container {
+      margin: 10px 0;
+    }
+  </style>
+</head>
+<body>
 
-// ✅ Firebase Configuration
-const firebaseConfig = {
-  apiKey: "AIzaSyDxdb7CtDfIjSPKt-p8rxmPQbJi_27lHnU",
-  authDomain: "mymoney-win-80d89.firebaseapp.com",
-  projectId: "mymoney-win-80d89",
-  storageBucket: "mymoney-win-80d89.appspot.com", // Fixed typo here
-  messagingSenderId: "1078329503911",
-  appId: "1:1078329503911:web:7686cae780fbddde362b82"
-};
+  <h2>Login with Phone</h2>
 
-// ✅ Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
+  <input type="tel" id="phone" placeholder="+91XXXXXXXXXX"><br>
+  <div id="recaptcha-container"></div>
+  <button onclick="sendOTP()">Send OTP</button><br>
 
-function App() {
-  const [phone, setPhone] = useState("");
-  const [otp, setOtp] = useState("");
-  const [confirmation, setConfirmation] = useState(null);
-  const [error, setError] = useState("");
-  const [message, setMessage] = useState("");
+  <input type="text" id="otp" placeholder="Enter OTP"><br>
+  <button onclick="verifyOTP()">Verify OTP</button>
 
-  const sendOTP = async (e) => {
-    e.preventDefault();
-    setError(""); setMessage("");
+  <p id="status"></p>
 
-    try {
-      // Setup invisible reCAPTCHA
-      if (!window.recaptchaVerifier) {
-        window.recaptchaVerifier = new RecaptchaVerifier(auth, "recaptcha", {
-          size: "invisible",
-          callback: () => {},
-        });
+  <script>
+    // Firebase config
+    const firebaseConfig = {
+      apiKey: "AIzaSyDxdb7CtDfIjSPKt-p8rxmPQbJi_27lHnU",
+      authDomain: "mymoney-win-80d89.firebaseapp.com",
+      projectId: "mymoney-win-80d89",
+      storageBucket: "mymoney-win-80d89.appspot.com",
+      messagingSenderId: "1078329503911",
+      appId: "1:1078329503911:web:7686cae780fbddde362b82"
+    };
+
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+
+    // Set up reCAPTCHA
+    window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', {
+      size: 'normal',
+      callback: function(response) {
+        // reCAPTCHA solved
       }
+    });
 
-      const appVerifier = window.recaptchaVerifier;
-      const fullPhone = "+91" + phone;
+    let confirmationResult;
 
-      const confirmationResult = await signInWithPhoneNumber(
-        auth,
-        fullPhone,
-        appVerifier
-      );
-
-      setConfirmation(confirmationResult);
-      setMessage("OTP sent successfully!");
-    } catch (err) {
-      setError(err.message);
+    function sendOTP() {
+      const phone = document.getElementById("phone").value;
+      auth.signInWithPhoneNumber(phone, window.recaptchaVerifier)
+        .then((result) => {
+          confirmationResult = result;
+          document.getElementById("status").innerText = "OTP sent!";
+        })
+        .catch((error) => {
+          document.getElementById("status").innerText = error.message;
+        });
     }
-  };
 
-  const verifyOTP = async (e) => {
-    e.preventDefault();
-    setError(""); setMessage("");
-
-    try {
-      await confirmation.confirm(otp);
-      setMessage("Phone verified & login successful!");
-    } catch (err) {
-      setError("Invalid OTP");
+    function verifyOTP() {
+      const code = document.getElementById("otp").value;
+      confirmationResult.confirm(code).then((result) => {
+        const user = result.user;
+        document.getElementById("status").innerText = "Login successful!";
+      }).catch((error) => {
+        document.getElementById("status").innerText = "Invalid OTP.";
+      });
     }
-  };
+  </script>
 
-  return (
-    <div style={styles.container}>
-      <h2 style={styles.heading}>Phone Number Login</h2>
-      <form onSubmit={confirmation ? verifyOTP : sendOTP} style={styles.form}>
-        {!confirmation && (
-          <input
-            type="tel"
-            placeholder="Enter phone number"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            style={styles.input}
-            required
-          />
-        )}
-
-        {confirmation && (
-          <input
-            type="text"
-            placeholder="Enter OTP"
-            value={otp}
-            onChange={(e) => setOtp(e.target.value)}
-            style={styles.input}
-            required
-          />
-        )}
-
-        <div id="recaptcha"></div>
-
-        <button type="submit" style={styles.button}>
-          {confirmation ? "Verify OTP" : "Send OTP"}
-        </button>
-
-        {error && <p style={styles.error}>{error}</p>}
-        {message && <p style={styles.success}>{message}</p>}
-      </form>
-    </div>
-  );
-}
-
-// 🔷 Simple Styles
-const styles = {
-  container: {
-    backgroundColor: "#0a0a23",
-    minHeight: "100vh",
-    color: "white",
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-    flexDirection: "column",
-  },
-  heading: {
-    marginBottom: "20px",
-  },
-  form: {
-    width: "300px",
-    display: "flex",
-    flexDirection: "column",
-  },
-  input: {
-    marginBottom: "15px",
-    padding: "10px",
-    fontSize: "16px",
-    borderRadius: "8px",
-    border: "none",
-  },
-  button: {
-    backgroundColor: "#00FFC6",
-    padding: "10px",
-    fontSize: "16px",
-    borderRadius: "8px",
-    border: "none",
-    cursor: "pointer",
-  },
-  error: {
-    color: "red",
-    marginTop: "10px",
-  },
-  success: {
-    color: "lightgreen",
-    marginTop: "10px",
-  },
-};
-
-export default App;
+</body>
+</html>
