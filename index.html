@@ -1,69 +1,237 @@
-<!-- index.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Login / Register - MyMoney Win</title>
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js"></script>
-  <script src="auth.js" defer></script>
+  <title>Betting App</title>
   <style>
+    * { box-sizing: border-box; }
     body {
-      background: linear-gradient(to right, #06beb6, #48b1bf);
-      font-family: Arial, sans-serif;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(to right, #00b09b, #96c93d);
       margin: 0;
+      padding: 0;
     }
-    .form-container {
+    .container {
+      max-width: 400px;
+      margin: 40px auto;
       background: #fff;
       padding: 30px;
-      border-radius: 10px;
-      box-shadow: 0 0 15px rgba(0,0,0,0.2);
-      width: 100%;
-      max-width: 400px;
+      border-radius: 12px;
+      box-shadow: 0 10px 20px rgba(0,0,0,0.2);
     }
-    .form-container h2 {
+    h2, h3 {
       text-align: center;
-      margin-bottom: 20px;
+      color: #333;
     }
-    input {
+    input, select, button {
       width: 100%;
-      padding: 10px;
-      margin-bottom: 15px;
+      padding: 12px;
+      margin: 10px 0;
+      border-radius: 6px;
       border: 1px solid #ccc;
-      border-radius: 5px;
     }
     button {
-      width: 100%;
-      padding: 10px;
-      background: #06beb6;
-      border: none;
+      background: #00b09b;
       color: white;
       font-weight: bold;
       cursor: pointer;
-      border-radius: 5px;
     }
-    .toggle {
-      text-align: center;
-      margin-top: 10px;
-      color: #333;
-      cursor: pointer;
+    button:hover {
+      background: #009688;
     }
+    .link { color: blue; cursor: pointer; text-align: center; margin-top: 10px; }
+    .hidden { display: none; }
+    .logout { color: red; cursor: pointer; text-align: center; margin-top: 20px; }
+    .wallet { font-size: 18px; margin: 10px 0; text-align: center; color: green; }
+    #betResult { text-align: center; font-weight: bold; margin-top: 20px; }
   </style>
 </head>
 <body>
-  <div class="form-container">
-    <h2 id="form-title">Login</h2>
-    <input type="email" id="email" placeholder="Email">
-    <input type="password" id="password" placeholder="Password">
-    <button onclick="login()" id="login-btn">Login</button>
-    <button onclick="register()" id="register-btn" style="display:none">Register</button>
-    <div class="toggle" onclick="toggleForm()">Don't have an account? Register here</div>
-  </div>
+
+<div class="container" id="loginPage">
+  <h2>Login</h2>
+  <input type="text" id="loginUser" placeholder="Username" />
+  <input type="password" id="loginPass" placeholder="Password" />
+  <button onclick="login()">Login</button>
+  <div class="link" onclick="showRegister()">Create Account</div>
+</div>
+
+<div class="container hidden" id="registerPage">
+  <h2>Register</h2>
+  <input type="text" id="regUser" placeholder="Username" />
+  <input type="password" id="regPass" placeholder="Password" />
+  <button onclick="register()">Register</button>
+  <div class="link" onclick="showLogin()">Back to Login</div>
+</div>
+
+<div class="container hidden" id="dashboardPage">
+  <h2>Welcome, <span id="dashUser">User</span> 👋</h2>
+  <div class="wallet">Wallet: ₹<span id="walletAmount">0</span></div>
+  <button onclick="addMoney()">Add ₹100</button>
+
+  <hr>
+
+  <h3>Place Your Bet</h3>
+  <select id="color">
+    <option value="">Select Color</option>
+    <option value="red">Red (1.8x)</option>
+    <option value="green">Green (1.8x)</option>
+  </select>
+
+  <select id="bigSmall">
+    <option value="">Big / Small</option>
+    <option value="big">Big (5–9)</option>
+    <option value="small">Small (0–4)</option>
+  </select>
+
+  <input type="number" id="number" placeholder="Number (0–9)" min="0" max="9" />
+  <input type="number" id="betAmount" placeholder="Bet Amount" min="1" />
+
+  <button onclick="placeBet()">Place Bet</button>
+  <div id="betResult"></div>
+
+  <div class="logout" onclick="logout()">Logout</div>
+</div>
+
+<script>
+  const loginPage = document.getElementById('loginPage');
+  const registerPage = document.getElementById('registerPage');
+  const dashboardPage = document.getElementById('dashboardPage');
+  const walletDisplay = document.getElementById('walletAmount');
+  const dashUser = document.getElementById('dashUser');
+  let currentUser = null;
+  let balanceKey = '';
+
+  function showLogin() {
+    registerPage.classList.add('hidden');
+    loginPage.classList.remove('hidden');
+  }
+
+  function showRegister() {
+    loginPage.classList.add('hidden');
+    registerPage.classList.remove('hidden');
+  }
+
+  function register() {
+    const user = document.getElementById('regUser').value.trim();
+    const pass = document.getElementById('regPass').value;
+
+    if (user.length < 3 || pass.length < 4) {
+      alert('Username or password too short!');
+      return;
+    }
+
+    const allUsers = JSON.parse(localStorage.getItem('users')) || {};
+    if (allUsers[user]) {
+      alert('User already exists!');
+      return;
+    }
+
+    allUsers[user] = { password: pass };
+    localStorage.setItem('users', JSON.stringify(allUsers));
+    alert('Registration successful!');
+    showLogin();
+  }
+
+  function login() {
+    const user = document.getElementById('loginUser').value.trim();
+    const pass = document.getElementById('loginPass').value;
+
+    const allUsers = JSON.parse(localStorage.getItem('users')) || {};
+    if (!allUsers[user] || allUsers[user].password !== pass) {
+      alert('Invalid credentials!');
+      return;
+    }
+
+    localStorage.setItem('user', user);
+    currentUser = user;
+    balanceKey = `wallet_${currentUser}`;
+    showDashboard();
+  }
+
+  function showDashboard() {
+    loginPage.classList.add('hidden');
+    registerPage.classList.add('hidden');
+    dashboardPage.classList.remove('hidden');
+
+    currentUser = localStorage.getItem('user');
+    if (!currentUser) return showLogin();
+    balanceKey = `wallet_${currentUser}`;
+    dashUser.innerText = currentUser;
+    updateWalletDisplay();
+  }
+
+  function updateWalletDisplay() {
+    const wallet = parseInt(localStorage.getItem(balanceKey)) || 0;
+    walletDisplay.innerText = wallet;
+  }
+
+  function addMoney() {
+    let wallet = parseInt(localStorage.getItem(balanceKey)) || 0;
+    wallet += 100;
+    localStorage.setItem(balanceKey, wallet);
+    updateWalletDisplay();
+  }
+
+  function placeBet() {
+    const color = document.getElementById('color').value;
+    const bigSmall = document.getElementById('bigSmall').value;
+    const number = document.getElementById('number').value;
+    const amount = parseInt(document.getElementById('betAmount').value);
+    const resultDiv = document.getElementById('betResult');
+
+    if (isNaN(amount) || amount <= 0) {
+      resultDiv.textContent = "Enter a valid bet amount.";
+      return;
+    }
+
+    let wallet = parseInt(localStorage.getItem(balanceKey)) || 0;
+    if (wallet < amount) {
+      resultDiv.textContent = "Insufficient balance!";
+      return;
+    }
+
+    const randNum = Math.floor(Math.random() * 10);
+    const randColor = Math.random() < 0.5 ? 'red' : 'green';
+    const isBig = randNum >= 5;
+    let winAmount = 0;
+    let won = false;
+
+    if (color === randColor) {
+      won = true;
+      winAmount += amount * 1.8;
+    }
+    if ((bigSmall === 'big' && isBig) || (bigSmall === 'small' && !isBig)) {
+      won = true;
+      winAmount += amount * 2;
+    }
+    if (number !== "" && parseInt(number) === randNum) {
+      won = true;
+      winAmount += amount * 9;
+    }
+
+    wallet -= amount;
+    if (won) {
+      wallet += Math.floor(winAmount);
+      resultDiv.textContent = `🎉 You won! Result: ${randColor}, ${randNum}. Winnings: ₹${Math.floor(winAmount)} 🎊`;
+    } else {
+      resultDiv.textContent = `❌ You lost! Result: ${randColor}, ${randNum}`;
+    }
+
+    localStorage.setItem(balanceKey, wallet);
+    updateWalletDisplay();
+  }
+
+  function logout() {
+    localStorage.removeItem('user');
+    showLogin();
+  }
+
+  // Auto login if already saved
+  if (localStorage.getItem('user')) {
+    showDashboard();
+  }
+</script>
+
 </body>
 </html>
